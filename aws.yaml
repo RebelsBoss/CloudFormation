@@ -1,0 +1,603 @@
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: "VPC"
+          Value: "my_infra_VPC"
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.10.0/24
+      AvailabilityZone: "us-east-1a"
+      Tags:
+        - Key: "VPC"
+          Value: "PublicSubnet1"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.30.0/24
+      AvailabilityZone: "us-east-1b"
+      Tags:
+        - Key: "VPC"
+          Value: "PublicSubnet2"
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.20.0/24
+      AvailabilityZone: "us-east-1a"
+      Tags:
+        - Key: "VPC"
+          Value: "PrivateSubnet1"
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.40.0/24
+      AvailabilityZone: "us-east-1b"
+      Tags:
+        - Key: "VPC"
+          Value: "PrivateSubnet2"
+
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: "VPC"
+          Value: "IGW"
+
+  IGWAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC
+
+  EIP1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Tags:
+        - Key: "VPC"
+          Value: "EIP1"
+
+  EIP2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Tags:
+        - Key: "VPC"
+          Value: "EIP2"
+
+  NAT1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIP1.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: "VPC"
+          Value: "NAT1"
+  
+  NAT2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIP2.AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: "VPC"
+          Value: "NAT2"
+
+  RTBPublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: "VPC"
+          Value: "RTBPublic"
+  
+  RTBPrivate1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: "VPC"
+          Value: "RTBPrivate1"
+  
+  RTBPrivate2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: "VPC"
+          Value: "RTBPrivate2"
+
+  IGWRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+      RouteTableId: !Ref RTBPublic
+
+  NAT1Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NAT1
+      RouteTableId: !Ref RTBPrivate1
+
+  NAT2Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NAT2
+      RouteTableId: !Ref RTBPrivate2
+
+  AssociationRTBPublic1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref RTBPublic
+
+  AssociationRTBPublic2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref RTBPublic
+
+  AssociationRTBPrivate1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref RTBPrivate1
+
+  AssociationRTBPrivate2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref RTBPrivate2
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow all
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: "EC2"
+          Value: "SecurityGroup"
+
+  VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      SecurityGroupIds: 
+        - !Ref SecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.codedeploy-commands-secure
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC
+
+  CodeDeployAgentServiceRoleForEC2:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: EC2Policy-for-codedeploy-agent-us-east-1
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "codedeploy-commands-secure:*"
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                Resource:
+                  - "*"
+      Tags:
+        - Key: "Role"
+          Value: "CodeDeployAgentServiceRoleForEC2"
+
+  BuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: CodeBuildBasePolicy-java-test-build-us-east-1
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:*"
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                Resource:
+                  - "arn:aws:s3:::codepipeline-us-east-1-*"
+              - Effect: Allow
+                Action:
+                  - "codecommit:GitPull"
+                Resource:
+                  - "arn:aws:codecommit:us-east-1:887108006328:test-java"
+              - Effect: Allow
+                Action:
+                  - "codebuild:*"
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                Resource:
+                  - "*"
+      Tags:
+        - Key: "Role"
+          Value: "BuildServiceRole"
+
+  DeploymentServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codedeploy.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: CodeDeployBasePolicy-java-test-deploy-us-east-1
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "autoscaling:*"
+                  - "ec2:*"
+                  - "iam:PassRole"
+                  - "tag:GetResources"
+                  - "sns:Publish"
+                  - "cloudwatch:DescribeAlarms"
+                  - "cloudwatch:PutMetricAlarm"
+                  - "elasticloadbalancing:*"
+                Resource:
+                  - "*"         
+      Tags:
+        - Key: "Role"
+          Value: "DeployServiceRole"
+
+  PipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: CodePipelineBasePolicy-java-test-deploy-us-east-1
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "codecommit:*"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "codedeploy:*"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "ec2:*"
+                  - "elasticloadbalancing:*"
+                  - "autoscaling:*"
+                  - "cloudwatch:*"
+                  - "s3:*"
+                  - "cloudformation:*"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "codebuild:*"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "iam:PassRole"
+                Condition:
+                  StringEqualsIfExists:
+                    iam:PassedToService:
+                      - "cloudformation.amazonaws.com"
+                      - "ec2.amazonaws.com"
+                Resource: "*"
+      Tags:
+        - Key: "Role"
+          Value: "PipelineServiceRole"
+
+  PublicTemplateASG:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: PublicTemplate
+      LaunchTemplateData:
+        ImageId: ami-067d1e60475437da2
+        InstanceType: t2.micro
+        KeyName: key-n-virginia
+        SecurityGroupIds: 
+          - !Ref SecurityGroup
+        UserData: !Base64
+          'Fn::Sub': |
+            #!/bin/bash -xe
+            yum update
+            yum install -y httpd
+            systemctl enable httpd
+            systemctl start httpd
+
+            bash -c "cat <<EOT > /var/www/html/index.html
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <script src="https://www.google.com/recaptcha/enterprise.js?render=6LekWlYoAAAAADQrOVlOsPLH4WbXI8E3nTxWkPT3"></script>
+            </head>
+            <body>
+                <h1>My First test HTML Page</h1>
+                <button class="g-recaptcha" data-sitekey="6LekWlYoAAAAADQrOVlOsPLH4WbXI8E3nTxWkPT3" data-callback='onSubmit' data-action='submit'>Submit</but>
+                <button onclick="window.location.href='http://34.118.72.217/';">Click Here</button>
+            </body>
+            <script>
+               function onSubmit(token) {
+                 document.getElementById("demo-form").submit();
+               }
+            </script>
+            </html>
+            EOT"
+
+  PrivateProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: PrivateProfile
+      Path: "/"
+      Roles:
+      - !Ref CodeDeployAgentServiceRoleForEC2
+
+  PrivateTemplateASG:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: PrivateTemplate
+      LaunchTemplateData:
+        ImageId: ami-067d1e60475437da2
+        InstanceType: t2.micro
+        KeyName: key-n-virginia
+        IamInstanceProfile:
+          Arn: !GetAtt
+            - PrivateProfile
+            - Arn
+        SecurityGroupIds: 
+          - !Ref SecurityGroup
+        UserData: !Base64
+          'Fn::Sub': |
+            #!/bin/bash -xe
+            yum update
+            yum install -y ruby wget java-1.8.0-amazon-corretto
+            cd /home/ec2-user
+            wget https://aws-codedeploy-${AWS::Region}.s3.${AWS::Region}.amazonaws.com/latest/install
+            chmod +x ./install
+            ./install auto
+            echo -e "\n:enable_auth_policy: true" >> /etc/codedeploy-agent/conf/codedeployagent.yml
+            service codedeploy-agent start
+
+  ClassicLB:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties: 
+      Listeners: 
+        - InstancePort: 80
+          InstanceProtocol: HTTP
+          LoadBalancerPort: 80
+          Protocol: HTTP
+      CrossZone: "true"
+      LoadBalancerName: ClassicLB
+      Subnets: 
+        - !GetAtt PublicSubnet1.SubnetId
+        - !GetAtt PublicSubnet2.SubnetId
+      SecurityGroups: 
+        - !Ref SecurityGroup
+
+  PublicASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: PublicASG
+      VPCZoneIdentifier: 
+        - !GetAtt PublicSubnet1.SubnetId
+        - !GetAtt PublicSubnet2.SubnetId
+      LaunchTemplate: 
+        LaunchTemplateId: !Ref PublicTemplateASG
+        Version: !GetAtt PublicTemplateASG.LatestVersionNumber
+      LoadBalancerNames: 
+        - !Ref ClassicLB
+      MaxSize: "4"
+      MinSize: "2"
+      DesiredCapacity: '2'
+
+  PublicASGPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref PublicASG
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: "70"
+
+  PrivateASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties: 
+      AutoScalingGroupName: PrivateASG
+      VPCZoneIdentifier: 
+        - !GetAtt PrivateSubnet1.SubnetId
+        - !GetAtt PrivateSubnet2.SubnetId
+      LaunchTemplate: 
+        LaunchTemplateId: !Ref PrivateTemplateASG
+        Version: !GetAtt PrivateTemplateASG.LatestVersionNumber
+      MaxSize: "4"
+      MinSize: "2"
+      DesiredCapacity: '2'
+
+  PrivateASGPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref PrivateASG
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: "70"
+
+  S3:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: awesomebuckettestbuild
+
+  CIBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: CIBuildProject
+      ServiceRole: !GetAtt BuildServiceRole.Arn
+      Artifacts:
+        Type: S3
+        EncryptionDisabled: "false"
+        Location: !Ref S3
+        Name: CIBuildProject
+        NamespaceType: NONE
+        Packaging: NONE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:corretto8
+      Source:
+        Location: https://git-codecommit.us-east-1.amazonaws.com/v1/repos/test-java
+        Type: CODECOMMIT
+      SourceVersion: refs/heads/main
+      TimeoutInMinutes: 10
+      Tags:
+        - Key: "CICD"
+          Value: "CIBuildProject"
+
+  CodeDeployApplication: 
+    Type: AWS::CodeDeploy::Application 
+    Properties:
+      ComputePlatform: Server
+      ApplicationName: java-test-app
+      Tags:
+        - Key: "CICD"
+          Value: "CodeDeployApplication"
+
+  DeploymentGroup: 
+    Type: AWS::CodeDeploy::DeploymentGroup 
+    Properties:
+      ApplicationName: !Ref CodeDeployApplication
+      DeploymentGroupName: java-test-deployment-group
+      AutoScalingGroups: 
+        - !Ref PrivateASG
+      ServiceRoleArn: !GetAtt DeploymentServiceRole.Arn
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce
+      DeploymentStyle:
+        #DeploymentOption: WITH_TRAFFIC_CONTROL
+        DeploymentOption: WITHOUT_TRAFFIC_CONTROL
+        DeploymentType: IN_PLACE
+      LoadBalancerInfo:
+        ElbInfoList:
+          - Name: ClassicLB      
+      Tags:
+        - Key: "CICD"
+          Value: "DeploymentGroup"
+
+  AppPipeline: 
+    Type: AWS::CodePipeline::Pipeline 
+    Properties: 
+      Name: AppPipeline
+      RoleArn: !GetAtt PipelineServiceRole.Arn
+      ArtifactStore: 
+        Location: !Ref S3
+        Type: S3      
+      Stages: 
+        - Name: Source 
+          Actions: 
+            - Name: SourceAction
+              ActionTypeId: 
+                Category: Source 
+                Owner: AWS 
+                Version: "1" 
+                Provider: CodeCommit 
+              OutputArtifacts: 
+                - Name: SourceCode 
+              Configuration: 
+                BranchName: main
+                RepositoryName: test-java
+              Region: us-east-1
+        - Name: Build 
+          Actions: 
+            - Name: BuildAction 
+              InputArtifacts: 
+                - Name: SourceCode 
+              ActionTypeId: 
+                Category: Build 
+                Owner: AWS 
+                Version: "1" 
+                Provider: CodeBuild
+              Configuration: 
+                ProjectName: !Ref CIBuildProject
+              OutputArtifacts:
+                - Name: JarArtifact
+              Region: us-east-1
+        - Name: Deploy 
+          Actions: 
+            - Name: DeployAction
+              InputArtifacts: 
+                - Name: JarArtifact 
+              ActionTypeId: 
+                Category: Deploy 
+                Owner: AWS 
+                Version: "1"
+                Provider: CodeDeploy 
+              Configuration: 
+                ApplicationName: !Ref CodeDeployApplication
+                DeploymentGroupName: !Ref DeploymentGroup
+              Region: us-east-1
+      Tags:
+        - Key: "CICD"
+          Value: "AppPipeline"
