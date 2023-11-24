@@ -5,7 +5,7 @@ Write in terminal :
 ```
 aws config
 ```
----------------
+-
 ```
 aws cloudformation create-stack --stack-name [enter name stack] --template-body file://[enter path file.yaml] --capabilities CAPABILITY_NAMED_IAM
 
