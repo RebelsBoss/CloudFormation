@@ -371,12 +371,12 @@ Resources:
             <!DOCTYPE html>
             <html>
             <head>
-            <script src="https://www.google.com/recaptcha/enterprise.js?render= __enter_your_sitekey__ "></script>
+            <script src="https://www.google.com/recaptcha/enterprise.js?render= [ENTER_YOUR_SITEKEY] "></script>
             </head>
             <body>
                 <h1>My First test HTML Page</h1>
-                <button class="g-recaptcha" data-sitekey=" __enter_your_sitekey__ " data-callback='onSubmit' data-action='submit'>Submit</but>
-                <button onclick="window.location.href='http:// __enter_your_url__ /';">Click Here</button>
+                <button class="g-recaptcha" data-sitekey=" [ENTER_YOUR_SITEKEY] " data-callback='onSubmit' data-action='submit'>Submit</but>
+                <button onclick="window.location.href='http:// [ENTER_YOUR_SITEKEY] /';">Click Here</button>
             </body>
             <script>
                function onSubmit(token) {
