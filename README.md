@@ -1,9 +1,9 @@
 # CloudFormation
 ## Overview pipline :
 ### 1. Network :
-a. Create VPC. 
-b. Create 2 private and 2 public subnets in VPC.
-c. Create Internet Gateway and attach to public subnets.
+- Create VPC. 
+- Create 2 private and 2 public subnets in VPC.
+- Create Internet Gateway and attach to public subnets.
 d. Create 2 NAT Gateway and attach to private subnets.
 e. Create 2 ElasticIPs attach with 2 NAT Gateway.
 f. Writte route tables.
