@@ -4,8 +4,8 @@
 - Create VPC. 
 - Create 2 private and 2 public subnets in VPC.
 - Create Internet Gateway and attach to public subnets.
-- Create 2 NAT Gateway and attach to private subnets.
-- Create 2 ElasticIPs attach with 2 NAT Gateway.
+- Create NAT Gateway and attach to private subnets.
+- Create ElasticIPs attach with NAT Gateway.
 - Writte route tables.
 - Create Security groups.
 - Create Endpoints for CI/CD process and attach with service.
