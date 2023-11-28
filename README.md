@@ -8,7 +8,7 @@
 - Create ElasticIPs attach with NAT Gateway.
 - Writte route tables.
 - Create Security groups.
-- Create Endpoints for CI/CD process and attach with service.
+- Create Endpoints for CI/CD process.
 ### 2. IAM :
 - Create roles for CI/CD process and attach with services.
 ### 3. EC2 :
