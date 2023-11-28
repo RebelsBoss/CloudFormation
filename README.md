@@ -1,5 +1,5 @@
 # CloudFormation
-## Overview pipline :
+## Overview aws.yaml pipline.
 ### 1. Network :
 - Create VPC. 
 - Create 2 private and 2 public subnets in VPC.
