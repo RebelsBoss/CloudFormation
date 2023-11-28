@@ -1,14 +1,14 @@
 # CloudFormation
 ## Overview pipline :
 ### 1. Network :
-      a. Create VPC. 
-      b. Create 2 private and 2 public subnets in VPC.
-      c. Create Internet Gateway and attach to public subnets.
-      d. Create 2 NAT Gateway and attach to private subnets.
-      e. Create 2 ElasticIPs attach with 2 NAT Gateway.
-      f. Writte route tables.
-      g. Create Security groups.
-      h. Create Endpoints for CI/CD process and attach with service.
+a. Create VPC. 
+b. Create 2 private and 2 public subnets in VPC.
+c. Create Internet Gateway and attach to public subnets.
+d. Create 2 NAT Gateway and attach to private subnets.
+e. Create 2 ElasticIPs attach with 2 NAT Gateway.
+f. Writte route tables.
+g. Create Security groups.
+h. Create Endpoints for CI/CD process and attach with service.
 ### 2. IAM :
       a. Create roles for CI/CD process and attach with services.
 ### 3. EC2 :
